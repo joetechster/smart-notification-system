@@ -1,97 +1,118 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Proximity-Triggered Notification System
 
-# Getting Started
+## Overview
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+This React Native + TypeScript project implements a smart notification system that tracks real-time updates on dynamic entities (like locations or resources) and alerts users when they are nearby or when key changes happen (status, price, or contributions). It integrates:
+
+- **Supabase** for real-time data subscriptions
+- **MMKV** for fast, local persistent storage of notifications
+- **Notifee** for native local push notifications
+- Background geofencing and timed prompts for contribution requests
+- A reusable React hook to easily manage notifications within the app
+- Utility functions
+
+---
+
+## How NotificationManager + Hook Work
+
+### NotificationManager
+
+The `NotificationManager` class is responsible for managing notifications stored locally using MMKV. It provides the following methods:
+
+- `addNotification(notification)`: Adds a new notification to storage.
+- `getAllNotifications()`: Retrieves all stored notifications.
+- `getNotificationById(id)`: Fetches a notification by its unique ID.
+- `markAsRead(id)`: Marks a specific notification as read.
+- `markAllAsRead()`: Marks all notifications as read.
+- `clearAllNotifications()`: Clears all notifications from storage.
+
+This class abstracts the local storage operations and ensures consistency in how notifications are stored and accessed.
+
+### useNotifications Hook
+
+The custom React hook `useNotifications()`:
+
+- Listens to MMKV storage key changes to keep the notifications state reactive.
+- Exposes the notifications array and all manipulation functions from `NotificationManager`.
+- Enables UI components to subscribe to notifications and update automatically when changes occur.
+- Provides an easy and modular interface to interact with notification data.
+
+---
+
+## useLocation Hook
+
+The `useLocation` hook provides real-time user location updates:
+
+- Uses React Native’s location APIs to request permissions and get the user’s current coordinates.
+- Subscribes to location changes to update user position continuously.
+- Returns the latest latitude and longitude, which is critical for proximity calculations.
+- Handles permission denial or errors gracefully.
+
+This hook centralizes all location logic, making it reusable across components needing geolocation.
+
+---
+
+## useListenToEntityChanges Hook
+
+The `useListenToEntityChanges` hook manages real-time subscriptions to entity updates via Supabase:
+
+- Subscribes to insert, update, and delete events on the entities or contributions table.
+- Calls a callback with updated entity data whenever a relevant change occurs.
+- Handles subscription cleanup to avoid memory leaks.
+- Facilitates live update flows without manual polling.
+
+This hook allows components or services to react immediately when entity data changes, enabling timely notifications and UI refresh.
+
+---
+
+## How Proximity + Background Alerts Are Handled
+
+### Real-time Entity Updates
+
+- The system subscribes to Supabase real-time updates on the entity contribution table.
+- Upon receiving an update (such as status or price changes), it calculates the distance between the user’s current location and the affected entity using the Haversine formula.
+- If the user is within a configurable perimeter (default is 5 km), a local notification is sent via Notifee and saved to MMKV for persistence.
+
+### Background Proximity Alerts (Background Tracking ON)
+
+- Uses geofencing (via libraries like `react-native-background-geolocation`) to monitor when the user enters the proximity of subscribed entities.
+- When the user enters an entity’s geofence, the app triggers a **NEARBY_ENTITY** notification, prompting the user to contribute relevant information.
+
+### Contribution Prompts (Background Tracking OFF)
+
+- When the user taps “Get Directions” for an entity and background tracking is disabled:
+  - The app starts a timer (configurable between 5 to 10 minutes).
+  - Once the timer expires, a **CONTRIBUTION_REQUEST** notification is automatically sent, prompting the user to contribute details about the entity.
+
+---
+
+## How the System Was Tested
+
+- **Manual Testing:**
+  - Verified that real-time Supabase updates correctly trigger notifications when the user is near an entity.
+  - Tested geofence behavior to ensure **NEARBY_ENTITY** alerts fire reliably in background tracking mode.
+  - Confirmed the delayed contribution prompt appears after "Get Directions" tap when background tracking is off.
+- Debug logs and temporary test notifications helped validate the correctness of distance calculations and event handling.
+- (Optional UI) Notifications list UI was tested for marking individual/all notifications as read and clearing them.
+
+---
+
+## Contact
+
+**Your Name**  
+Email: bamideledamilola3@gmail.com  
+GitHub: [github.com/joetechster](https://github.com/joetechster)
+
+# Replicate
 
 ## Step 1: Start Metro
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
-
 ```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+npx react-native start
 ```
 
 ## Step 2: Build and run your app
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
 ```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+npx react-native run-android
 ```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
